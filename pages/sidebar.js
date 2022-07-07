@@ -6,7 +6,8 @@ const Fragment = (props, children) => children;
 const Profile = ({ profile, register, inputProfile }) => {
   const hasProfile = profile && profile.nSessions > 0;
   let newProfile = {};
-  if (profile) {
+  console.log(profile);
+ // if (true || profile) {
     return hasProfile ? (
       <>
         <li class='nav-title'>{profile.fullname}</li>
@@ -47,7 +48,7 @@ const Profile = ({ profile, register, inputProfile }) => {
           <input
             class='form-control form-control-sm'
             type='text'
-            value={profile.fullname}
+            value=''
             oninput={e => {
               inputProfile({ field: 'fullname', value: e.target.value });
             }}
@@ -62,7 +63,7 @@ const Profile = ({ profile, register, inputProfile }) => {
           <input
             class='form-control form-control-sm'
             type='email'
-            value={profile.email}
+            value=''
             oninput={e => {
               inputProfile({ field: 'email', value: e.target.value });
             }}
@@ -80,7 +81,7 @@ const Profile = ({ profile, register, inputProfile }) => {
       </>
     );
   }
-};
+//};
 
 const Account = ({ account, balance, isAdmin }) => {
   return account ? (

@@ -17,7 +17,7 @@ let web3js;
 if (typeof web3 !== 'undefined') {
   web3js = new Web3(web3.currentProvider);
 } else {
-  web3js = new Web3('ws://localhost:7545');
+  web3js = new Web3('http://localhost:7545');
 }
 
 import Main from './contracts/Main.json';
@@ -50,7 +50,7 @@ const contractFunctions = {
 
   // Get Admin address of Main contract
   getAdmin: mainContract.methods.admin().call,
-
+  
   // Get participant by address
   participants: address => mainContract.methods.participants(address).call,
 
@@ -94,12 +94,18 @@ const actions = {
     let contract = new web3js.eth.Contract(Session.abi, {
       data: Session.bytecode
     });
+
+    console.log(state);
     await contract
       .deploy({
         arguments: [
           // TODO: Argurment when Deploy the Session Contract
           // It must be matched with Session.sol Contract Constructor
           // Hint: You can get data from `state`
+          config.mainContract,
+          state.newProduct["name"],
+          state.newProduct["description"],
+          [state.newProduct["image"]]
         ]
       })
       .send({ from: state.account });
@@ -138,7 +144,9 @@ const actions = {
   location: location.actions,
 
   getAccount: () => async (state, actions) => {
+    
     let accounts = await contractFunctions.getAccounts();
+    console.log(accounts);
     let balance = await contractFunctions.getBalance(accounts[0]);
     let admin = await contractFunctions.getAdmin();
     let profile = await contractFunctions.participants(accounts[0])();

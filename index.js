@@ -265,7 +265,7 @@ const actions = {
       let description = sessionInfo[1]; // TODO
       let price = sessionInfo[3]; // TODO
       let image = ''; // TODO
-      let status  = sessionInfo[5] == 0 ? "Created" : sessionInfo[5] == 1 ? "Started" : sessionInfo[5] == 2 ? "Stoped" : "Closed";
+      let status  = sessionInfo[4] == 0 ? "Created" : sessionInfo[4] == 1 ? "Started" : sessionInfo[4] == 2 ? "Stoped" : "Closed";
 
       if(sessionInfo[2] && sessionInfo[2].length > 0)
         image = sessionInfo[2][0];

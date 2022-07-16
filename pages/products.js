@@ -4,7 +4,8 @@ import './products.css';
 const Fragment = (props, children) => children;
 
 const Product = ({ product, newProduct, input, create, isAdmin, fn }) => {
-  let price;
+  let price = 0;
+  let proposedPrice = 0;
   return (
     <>
       {product ? (
@@ -35,7 +36,8 @@ const Product = ({ product, newProduct, input, create, isAdmin, fn }) => {
 
               <dt class='col-sm-4'>Proposed Price</dt>
               <dd class='col-sm-8'>
-                <p>$ {product.price / 100}</p>
+                {/* <p>$ {product.price / 100}</p> */}
+                <p>$ {product.price}</p>
               </dd>
 
               <dt class='col-sm-4'>Status</dt>
@@ -51,14 +53,14 @@ const Product = ({ product, newProduct, input, create, isAdmin, fn }) => {
                   <button
                     class='btn btn-outline-primary'
                     type='button'
-                    onclick={e => fn('start')}
+                    onclick={e => fn({action: 'start'})}
                   >
                     Start
                   </button>
                   <button
                     class='btn btn-outline-primary'
                     type='button'
-                    onclick={e => fn('stop')}
+                    onclick={e => fn({action: 'stop'})}
                   >
                     Stop
                   </button>
@@ -73,7 +75,7 @@ const Product = ({ product, newProduct, input, create, isAdmin, fn }) => {
                   <button
                     class='btn btn-outline-primary'
                     type='button'
-                    onclick={e => fn('pricing', price)}
+                    onclick={e => fn({action: 'pricing', data: price})}
                   >
                     Set price and close
                   </button>
@@ -87,10 +89,11 @@ const Product = ({ product, newProduct, input, create, isAdmin, fn }) => {
                   type='number'
                   class='form-control'
                   placeholder='price'
-                  oninput={e => (price = e.target.value)}
+                  oninput={e => (proposedPrice = e.target.value)}
                 />
                 <div class='input-group-append'>
-                  <button class='btn btn-primary' type='button'>
+                  <button class='btn btn-primary' type='button'
+                  onclick={e => fn({action: 'proposedPrice', data: proposedPrice})}>
                     Propose price
                   </button>
                 </div>

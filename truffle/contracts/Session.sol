@@ -2,21 +2,6 @@ pragma solidity ^0.4.17;
 pragma experimental ABIEncoderV2;
 import './Main.sol';
 
-// Interface of Main contract to call from Session contract
-// contract Main {
-//     struct IParticipant{ 
-//         address Account;
-//         string FullName;
-//         string Email;
-//         uint256 SessionNumber;
-//         uint256 Deviation;
-//     }
-
-//     function addSession(address session) public {}
-//     function participants (address _account) view public returns(IParticipant){}
-//     function updateSessionNumber2() public returns(address) {}
-
-// }
 
 contract Session {
     // Variable to hold Main Contract Address when create new Session Contract
@@ -27,21 +12,20 @@ contract Session {
 
     // TODO: Variables
     struct IPricingSession{
-        string ProductName;
-        string ProductDescription;
-        string[] ProductImages;
-        uint256 ProposedPrice;
-        uint256 FinalPrice;
-        SessionState State;
+        string name;
+        string description;
+        string[] images;
+        uint256 proposedPrice;
+        SessionState state;
     }
 
     struct ISessionParticipant{
-        address Account;
-        uint256 GivenPrice;
-        uint256 Deviation;
+        address account;
+        uint256 givenPrice;
+        uint256 deviation;
     }
 
-    IPricingSession public pricingSession;
+    IPricingSession private pricingSession;
     address public admin;
     address[] private participantAccounts;
     mapping(address => ISessionParticipant) sessionParticipant;
@@ -67,10 +51,12 @@ contract Session {
          MainContract =  Main(_mainContract);
         
         // TODO: Init Session contract
-        pricingSession.ProductName = _productName;
-        pricingSession.ProductDescription = _productDescription;
-        pricingSession.ProductImages = _productImages;
-        pricingSession.State = SessionState.created;
+        require (MainContract.admin() == msg.sender);
+
+        pricingSession.name = _productName;
+        pricingSession.description = _productDescription;
+        pricingSession.images = _productImages;
+        pricingSession.state = SessionState.created;
 
         admin = msg.sender;
 
@@ -81,54 +67,56 @@ contract Session {
 
     // TODO: Functions
     function startPricingSession() onlyAdmin() public{
-        require(pricingSession.State == SessionState.created || pricingSession.State == SessionState.stoped);
+        require(pricingSession.state == SessionState.created || pricingSession.state == SessionState.stoped);
 
-        pricingSession.State = SessionState.started;
+        pricingSession.state = SessionState.started;
         emit started();
     }
 
     function stopPricingSession() onlyAdmin() public{
-        require(pricingSession.State == SessionState.started);
+        require(pricingSession.state == SessionState.started);
 
-        pricingSession.State == SessionState.stoped;
+        pricingSession.state = SessionState.stoped;
         emit stoped();
     }
 
     function setGivenPrice(uint256 _price) public{
-       bool isRegisted = MainContract.checkRegisterAccount(msg.sender);
-       require (isRegisted);
+        require(pricingSession.state == SessionState.started);
+
+        bool isRegisted = MainContract.checkRegisterAccount(msg.sender);
+        require (isRegisted);
 
         // update participant
-        if(sessionParticipant[msg.sender].Account == address(0)){
-            sessionParticipant[msg.sender].Account = msg.sender;
+        if(sessionParticipant[msg.sender].account == address(0)){
+            sessionParticipant[msg.sender].account = msg.sender;
 
             participantAccounts.push(msg.sender);
 
             MainContract.updateSessionNumber(msg.sender);
         }
             
-        sessionParticipant[msg.sender].GivenPrice = _price;
+        sessionParticipant[msg.sender].givenPrice = _price;
         
-        pricingSession.ProposedPrice = calculatePrice();
+        pricingSession.proposedPrice = calculatePrice();
 
-        emit givenPriceUpdated(msg.sender, _price, pricingSession.ProposedPrice);
+        emit givenPriceUpdated(msg.sender, _price, pricingSession.proposedPrice);
     }
 
     function setFinalPrice(uint256 _price) onlyAdmin public{
-        require(pricingSession.State != SessionState.closed);
+        require(pricingSession.state != SessionState.closed);
 
-        pricingSession.State = SessionState.closed;
-        pricingSession.FinalPrice = _price;
+        pricingSession.state = SessionState.closed;
+        pricingSession.proposedPrice = _price;
 
         for(uint256 i = 0; i < participantAccounts.length; i++){
             // in session
             ISessionParticipant storage itemParticipant = sessionParticipant[participantAccounts[i]];
                       
-            uint256 numerator = abs(_price - itemParticipant.GivenPrice);
+            uint256 numerator = abs(_price - itemParticipant.givenPrice);
             uint256 denominator = _price;
 
-            uint256 deviation = numerator / denominator * 100;
-            itemParticipant.Deviation = deviation;
+            uint256 deviation = numerator  * 100 / denominator;
+            itemParticipant.deviation = deviation;
 
             // in main
             uint256 sessionNumber = MainContract.getSessionNumber(participantAccounts[i]);           
@@ -156,7 +144,7 @@ contract Session {
 
         for(uint256 i = 0; i < n; i++){
             uint256 deviation = MainContract.getDeviation(participantAccounts[i]);
-            uint256 pGivenPrice = sessionParticipant[participantAccounts[i]].GivenPrice;
+            uint256 pGivenPrice = sessionParticipant[participantAccounts[i]].givenPrice;
 
             numerator += (pGivenPrice * (100 - deviation));
             denominator += deviation;
@@ -167,12 +155,16 @@ contract Session {
     }
 
     function updateProductInfo(string _productName, string _productDescription, string[] memory _productImages) onlyAdmin() public{
-        pricingSession.ProductName = _productName;
-        pricingSession.ProductDescription = _productDescription;
-        pricingSession.ProductImages = _productImages;
+        pricingSession.name = _productName;
+        pricingSession.description = _productDescription;
+        pricingSession.images = _productImages;
     }
 
     function viewParticipantInfo(address _account) view public returns (ISessionParticipant){
         return sessionParticipant[_account];
+    }
+
+    function getPricingSession() view public returns(string memory, string memory, string[] memory, uint256, SessionState) {
+        return (pricingSession.name, pricingSession.description, pricingSession.images, pricingSession.proposedPrice, pricingSession.state);
     }
 }

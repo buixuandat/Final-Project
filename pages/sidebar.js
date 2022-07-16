@@ -4,11 +4,11 @@ import { Link } from '@hyperapp/router';
 const Fragment = (props, children) => children;
 
 const Profile = ({ profile, register, inputProfile }) => {
+  console.log(profile);
   const hasProfile = profile && profile.nSessions > 0;
   let newProfile = {};
-  console.log(profile);
- // if (true || profile) {
-    return hasProfile ? (
+  if (profile) {
+    return  hasProfile ? (
       <>
         <li class='nav-title'>{profile.fullname}</li>
         <li class='nav-item px-3 mb-2'>
@@ -48,7 +48,7 @@ const Profile = ({ profile, register, inputProfile }) => {
           <input
             class='form-control form-control-sm'
             type='text'
-            value=''
+            value={profile != null ? profile.fullname: ''}
             oninput={e => {
               inputProfile({ field: 'fullname', value: e.target.value });
             }}
@@ -63,7 +63,7 @@ const Profile = ({ profile, register, inputProfile }) => {
           <input
             class='form-control form-control-sm'
             type='email'
-            value=''
+            value={profile != null ?profile.email:''}
             oninput={e => {
               inputProfile({ field: 'email', value: e.target.value });
             }}
@@ -81,7 +81,7 @@ const Profile = ({ profile, register, inputProfile }) => {
       </>
     );
   }
-//};
+};
 
 const Account = ({ account, balance, isAdmin }) => {
   return account ? (

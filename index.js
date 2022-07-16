@@ -24,7 +24,8 @@ import Main from './contracts/Main.json';
 import Session from './contracts/Session.json';
 
 const mainContract = new web3js.eth.Contract(Main.abi, config.mainContract);
-
+//conso//le.log(Main.abi);
+//console.log(config.mainContract);
 var state = {
   count: 1,
   location: location.state,
@@ -40,6 +41,8 @@ var state = {
   sessions: [],
   currentProductIndex: 0
 };
+
+
 
 // Functions of Main Contract
 const contractFunctions = {
@@ -61,8 +64,7 @@ const contractFunctions = {
   iParticipants: index => mainContract.methods.iParticipants(index).call,
 
   // Register new participant
-  register: (fullname, email) =>
-    mainContract.methods.register(fullname, email).send,
+  register: (fullname, email) => mainContract.methods.register(fullname, email).send,
   
   // Get number of sessions  
   nSessions: mainContract.methods.nSessions().call,
@@ -95,7 +97,7 @@ const actions = {
       data: Session.bytecode
     });
 
-    console.log(state);
+    //console.log(state);
     await contract
       .deploy({
         arguments: [
@@ -119,23 +121,38 @@ const actions = {
     };
   },
 
-  sessionFn: (action, data) => (state, {}) => {
+  sessionFn: ({action, data}) => async (state, {}) => {
+    console.log(action);
+    console.log(data);
+    console.log(state.currentProductIndex);
+
+    let session = await contractFunctions.sessions(state.currentProductIndex)();
+    // Load the session contract on network
+    let contract = new web3js.eth.Contract(Session.abi, session);
+
     switch (action) {
       case 'start':
         //TODO: Handle event when User Start a new session
+       await contract.methods.startPricingSession().send({ from: state.account });
+
         break;
       case 'stop':
         //TODO: Handle event when User Stop a session
+        await contract.methods.stopPricingSession().send({ from: state.account });
 
         break;
       case 'pricing':
         //TODO: Handle event when User Pricing a product
         //The inputed Price is stored in `data`
+        await contract.methods.setFinalPrice(data).send({from: state.account });
 
         break;
-      case 'close':
+     // case 'close':
         //TODO: Handle event when User Close a session
         //The inputed Price is stored in `data`
+     //   break;
+      case 'proposedPrice':        // include close function
+        await contract.methods.setGivenPrice(data).send({from: state.account });
 
         break;
     }
@@ -146,12 +163,16 @@ const actions = {
   getAccount: () => async (state, actions) => {
     
     let accounts = await contractFunctions.getAccounts();
-    console.log(accounts);
+ 
     let balance = await contractFunctions.getBalance(accounts[0]);
-    let admin = await contractFunctions.getAdmin();
-    let profile = await contractFunctions.participants(accounts[0])();
 
-    actions.setAccount({
+    let admin = await contractFunctions.getAdmin();
+
+    let profile = await contractFunctions.participants(accounts[0])();
+    if(!profile || profile.account.includes('0x000000000000000'))
+      profile = {};
+
+    state = actions.setAccount({
       account: accounts[0],
       balance,
       isAdmin: admin === accounts[0],
@@ -174,6 +195,22 @@ const actions = {
     // TODO: Load all participants from Main contract.
     // One participant should contain { address, fullname, email, nSession and deviation }
 
+    let participantNummber = await contractFunctions.nParticipants();
+
+    let i = 0;
+    while (i < participantNummber){
+        let address = await contractFunctions.iParticipants(i)();
+        let participant = await contractFunctions.participants(address)();     
+
+        console.log(participant);
+
+        participants.push({address: participant.account,
+                          fullname: participant.fullname, email:  participant.email, 
+                          nSessions: participant.nSessions, 
+                          deviation: participant.deviation});
+        i++;
+    }
+
     actions.setParticipants(participants);
   },
 
@@ -193,12 +230,15 @@ const actions = {
 
   register: () => async (state, actions) => {
     // TODO: Register new participant
+    let result = await contractFunctions.register(state.profile.fullname, state.profile.email)({ from: state.account });
 
-    const profile = {};
+ 
     // TODO: And get back the information of created participant
-    
-    actions.setProfile(profile);
+    const profile =  await contractFunctions.participants(state.account)();
+//     console.log(profile);
+     actions.setProfile(profile);
   },
+
 
   getSessions: () => async (state, actions) => {
     // TODO: Get the number of Sessions stored in Main contract
@@ -219,12 +259,18 @@ const actions = {
       // Hint: - Call methods of Session contract to reveal all nessesary information
       //       - Use `await` to wait the response of contract
 
-      let name = ''; // TODO
-      let description = ''; // TODO
-      let price = 0; // TODO
-      let image = ''; // TODO
+      let sessionInfo = await contract.methods.getPricingSession().call();
 
-      sessions.push({ id, name, description, price, contract, image });
+      let name = sessionInfo[0]; // TODO
+      let description = sessionInfo[1]; // TODO
+      let price = sessionInfo[3]; // TODO
+      let image = ''; // TODO
+      let status  = sessionInfo[5] == 0 ? "Created" : sessionInfo[5] == 1 ? "Started" : sessionInfo[5] == 2 ? "Stoped" : "Closed";
+
+      if(sessionInfo[2] && sessionInfo[2].length > 0)
+        image = sessionInfo[2][0];
+
+      sessions.push({ id, name, description, price, contract, image, status });
     }
     actions.setSessions(sessions);
   },
@@ -234,8 +280,12 @@ const actions = {
       ...state,
       sessions: sessions
     };
-  }
+  },
+
+
 };
+
+
 
 const view = (
   state,

@@ -5,11 +5,11 @@ contract Main {
 
     // Structure to hold details of Bidder
     struct IParticipant{ 
-        address Account;
-        string FullName;
-        string Email;
-        uint256 SessionNumber;
-        uint256 Deviation;
+        address account;
+        string fullname;
+        string email;
+        uint256 nSessions;
+        uint256 deviation;
     }
     
     IParticipant[] private registerParticipants;
@@ -41,18 +41,21 @@ contract Main {
         pricingSessions.push(_session);
     }
 
-    function register(string _fullName, string _email) public {           
+    function register(string _fullName, string _email) public {     
+        IParticipant storage participant = getParticipant(msg.sender);  
+        require(participant.account != msg.sender);
+            
         registerParticipants.push(IParticipant(msg.sender, _fullName, _email, 0, 0));
     }
 
     function updateParticipant(string _fullName, string _email) public{
         for(uint256 i = 0; i < registerParticipants.length; i++)
         {
-            if(msg.sender == registerParticipants[i].Account)
+            if(msg.sender == registerParticipants[i].account)
             {
                 IParticipant storage participant = registerParticipants[i];
-                participant.Email = _email;
-                participant.FullName = _fullName;
+                participant.email = _email;
+                participant.fullname = _fullName;
             }
         }        
     }
@@ -60,7 +63,7 @@ contract Main {
     function checkRegisterAccount(address _account) view public returns(bool){
         for(uint256 i = 0; i < registerParticipants.length; i++)
         {
-            if(_account == registerParticipants[i].Account)
+            if(_account == registerParticipants[i].account)
                 return true;
         }
         return false;
@@ -68,18 +71,18 @@ contract Main {
 
     function updateSessionNumber(address _account) onlySession public {
         IParticipant storage participant = getParticipant(_account);
-        participant.SessionNumber += 1;
+        participant.nSessions += 1;
     }
 
     function updateDeviation(address _account, uint256 _deviation) onlySession public {
         IParticipant storage participant = getParticipant(_account);
-        participant.Deviation = _deviation;
+        participant.deviation = _deviation;
     }
 
     function getParticipant(address _account) internal returns (IParticipant storage){
         for(uint256 i = 0; i < registerParticipants.length; i++)
         {
-            if(_account == registerParticipants[i].Account)
+            if(_account == registerParticipants[i].account)
                 return registerParticipants[i];
         }
     }
@@ -87,12 +90,12 @@ contract Main {
      // View functions
     function getDeviation(address _account) view public returns (uint256){
          IParticipant memory participant = getParticipant(_account);
-         return participant.Deviation;
+         return participant.deviation;
     }
 
     function getSessionNumber(address _account) view public returns(uint256){
         IParticipant memory participant = getParticipant(_account);
-         return participant.SessionNumber;
+         return participant.nSessions;
     }
 
     function participants (address _account) view public returns(IParticipant){
@@ -107,7 +110,7 @@ contract Main {
     function iParticipants (uint256 _index) view public returns(address){
         require(_index < registerParticipants.length);
        
-        return registerParticipants[_index].Account;       
+        return registerParticipants[_index].account;       
     }
 
     function nSessions() view public returns (uint256){
